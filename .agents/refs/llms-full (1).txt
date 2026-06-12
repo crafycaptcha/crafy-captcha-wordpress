@@ -1,0 +1,366 @@
+# CrafyCAPTCHA - Complete Consolidated Documentation for AI Agents (LLMs)
+
+This file contains the comprehensive documentation for CrafyCAPTCHA, combining the business vision, technical architecture, integration documentation (Frontend and Backend), pricing schemes, and frequently asked questions.
+
+---
+
+## 1. Business Vision and Overview
+
+**CrafyCAPTCHA** is an advanced and modular bot and spam protection platform. It provides maximum security at the UI level, designed to protect the client's server, endpoints, forms, accounts, and infrastructure, as well as to prevent automated registrations, fraud, etc., without compromising the end-user experience (UX).
+
+Unlike traditional captchas that generate frustration and abandonment in conversion rates, CrafyCAPTCHA employs an **adaptive friction** model, adjusting the difficulty of challenges in real time based on a deep analysis of the visitor's risk level.
+
+### What It Looks Like (User Experience)
+For the end user, the integration is presented as an elegant interactive widget in the style of *"I am not a robot"*. This widget includes a checkbox and can be strategically placed at the end of a registration form, login screen, or even on a dedicated validation screen.
+
+By clicking on the checkbox, the system evaluates the risk level in milliseconds: if the traffic is trustworthy, the verification is completed automatically and transparently; if additional validation is required, a small and intuitive visual puzzle is displayed within the same interface without redirecting the user.
+
+### Value Proposition
+*   **Invisible when safe, rigorous when doubtful:** Legitimate users experience a straight pass (zero clicks or invisible Proof-of-Work based tests), while suspicious traffic faces tiered biometric and cryptographic tests. Visual puzzles are optional.
+*   **Privacy by Design (Privacy First & GDPR):** No invasive tracking, no third-party telemetry, and no dependencies on Google. User-friendly.
+*   **Extreme Customization:** Seamless aesthetic integration. Widgets adapt their theme (light/dark), colors, borders, and typography to the client's brand design.
+*   **Easy Integration (Drop-in):** Clean and structured SDKs for both Frontend (JS, React) and Backend (PHP, Node.js, Python), allowing protection to be implemented in minutes.
+*   **Multi-Technology Approach and Comprehensive Privacy:** CrafyCAPTCHA combines advanced automated traffic and fraud detection technologies while always respecting user privacy. Unlike other options on the market that are limited to offering a single method (only PoW or only visual puzzles), our service integrates in a unified way:
+    *   Cryptographic Proof of Work (PoW).
+    *   Browser instrumentation and behavioral analysis.
+    *   Network and environment analysis.
+    *   Queries to a global threat database.
+    *   Biometric visual puzzles (optional).
+    *   Native integration with third-party software (e.g., Cloudflare Turnstile) to further enhance detection.
+
+Control Panel: https://captcha.crafy.net/panel/
+
+---
+
+## 2. Technical Architecture and Protection Flows
+
+The system is divided into multiple layers that collaborate to analyze, mitigate, and validate every access attempt. 
+Protection layers include: PoW, browser instrumentation, network analysis, global threat database, and optional visual puzzles.
+
+### A. CDN and Client Integration
+*   **`CrafyCAPTCHA.js` (Frontend SDK):** Dynamically injects the widget (isolated Iframe), handles secure asynchronous communication (`postMessage`), and offers multi-language support. Integrates cryptographic signatures (Curve25519) with `tweetnacl`.
+*   **`CrafyCAPTCHA SDKs` (Backend SDK):** Facilitates flow creation (`createFlow`) with Nonces for Replay Attack prevention, and the final atomic validation (`verifyFlow`) locally, reducing additional HTTP requests.
+
+### B. The Challenge Engine
+*   **Origin Validation:** Verifies the domain (`Referer`) against the public key.
+*   **Dynamic Challenge Types:**
+    1.  **Invisible:** PoW cryptographic resolution in the background.
+    2.  **Checkbox:** Biometric mouse analysis and honeypots.
+    3.  **Slider:** Sliding visual puzzle.
+    4.  **Connect:** Joining alphanumeric points.
+*   **Cloudflare Turnstile:** Optional integration with third-party software for additional invisible fallback protection.
+
+### C. Artificial Intelligence and Risk Analysis
+Generates a **Risk Score** (between `0.0` and `1.0`) analyzing general references such as:
+1.  **Historical IP Reputation.**
+2.  **Geolocation and ASN.**
+3.  **Headers and User-Agent Behavior.**
+4.  **System Mismatches and Incongruencies.**
+
+### D. Final State Verification
+Uses UUID tokens (`flow_token`) that are consumed atomically to prevent *Replay Attacks*, also verifying the flow's ownership.
+
+---
+
+## 3. Platform Credentials
+
+There are 4 main credentials required:
+1. **`Public Key`**: Identifies the account. Exposed in Frontend and Backend. (Never changes).
+2. **`Secret Key`**: Secret key for server cryptographic operations. Exposed only in Backend. Must be treated as a password and never exposed to the public.
+3. **`Signing Public Key`**: Public key used by the Frontend SDK to verify iframe signatures. Exposed in Frontend and Backend. (Never changes).
+4. **`Public Token`**: Identifies the active plan. Changes upon upgrade/downgrade. Obtained dynamically using `getPublicToken()` from the Backend SDK.
+
+*Best Practices:* Store in `.env` (except for the Public Token, which is dynamic).
+
+---
+
+## 4. Integration Flow (Step by Step)
+
+1.  **Create Flow (Backend):** Server generates the secure configuration using `createFlow()`.
+2.  **Rendering (Frontend):** Frontend SDK injects the iframe using the credentials. The default method is via `optionsUrl`, while `encryptedIframeOptions` remains for legacy support.
+3.  **Evaluation:** CrafyCAPTCHA intercepts, calculates Risk Score, and shows or resolves the challenge in the background.
+4.  **Approval (Frontend):** Successful challenge -> server signs result -> Frontend SDK generates hidden `CrafyCAPTCHA_token` in the form.
+5.  **Verification (Backend):** Server receives token on submit, validates with `verifyFlow()`. If `true`, access granted.
+
+---
+
+## 5. Frontend SDKs
+
+### Vanilla JavaScript
+Package link: https://www.jsdelivr.com/package/gh/crafycaptcha/crafy-captcha-js
+
+Include the script (with `defer` or `async`) and initialize:
+
+```javascript
+// Use the CrafyCAPTCHALoaded event if using defer/async
+window.addEventListener('CrafyCAPTCHALoaded', () => {
+    CrafyCAPTCHA.init(
+        'crafy-container', 'YOUR_PUBLIC_KEY', 'YOUR_PUBLIC_TOKEN', 'YOUR_SIGNING_PUBLIC_KEY',
+        {
+            optionsUrl: '/crafy-options.php', // Default method
+            inputName: 'CrafyCAPTCHA_token',
+            theme: 'dark',
+            onSuccess: (token) => { console.log(token); }
+        }
+    );
+});
+```
+
+### React SDK (`@crafyholding/crafy-captcha-react`)
+```jsx
+<CrafyCaptcha 
+    publicKey="YOUR_PUBLIC_KEY"
+    publicToken="YOUR_PUBLIC_TOKEN"
+    signingPublicKey="YOUR_SIGNING_PUBLIC_KEY"
+    options={{ optionsUrl: '/crafy-options.php', theme: 'dark' }}
+    onSuccess={(token) => setCaptchaToken(token)}
+/>
+```
+
+---
+
+## 6. Backend SDKs
+
+Three key methods across all languages: `getPublicToken()`, `createFlow(options)`, and `verifyFlow(captchaToken)`.
+Options for `createFlow`:
+* `mode`: `'auto'`, `'hidden'`, `'puzzle'`
+* `puzzles`: `['checkbox', 'slider', 'connect']`
+
+### PHP SDK (`crafycaptcha/crafy-captcha`)
+Package link: https://packagist.org/packages/crafycaptcha/crafy-captcha
+Installation: `composer require crafycaptcha/crafy-captcha`
+
+```php
+$crafy = new CrafyCAPTCHA('YOUR_PUBLIC_KEY', 'YOUR_SECRET_KEY');
+$encryptedIframeOptions = $crafy->createFlow(['mode' => 'auto']);
+$publicToken = $crafy->getPublicToken();
+// On validation:
+$isValid = $crafy->verifyFlow($_POST['CrafyCAPTCHA_token']);
+```
+*Supports Database storage (PDOStorage) or custom ones implementing `StorageInterface`.*
+
+### Node.js SDK (`crafy-captcha`)
+Package link: https://www.npmjs.com/package/crafy-captcha
+Installation: `npm install crafy-captcha`
+
+```javascript
+const captcha = new CrafyCAPTCHA('pk_...', 'sk_...');
+const encryptedIframeOptions = await captcha.createFlow({ mode: 'auto' });
+const publicToken = await captcha.getPublicToken();
+// On validation:
+const isValid = await captcha.verifyFlow(req.body.CrafyCAPTCHA_token);
+```
+*Supports custom storage (e.g., Redis via `StorageAdapter`).*
+
+### Python SDK (`crafy-captcha`)
+Package link: https://pypi.org/project/crafy-captcha/
+Installation: `pip install crafy-captcha`
+
+```python
+captcha = CrafyCAPTCHA('YOUR_PUBLIC_KEY', 'YOUR_SECRET_KEY')
+encrypted_iframe_options = captcha.create_flow({'mode': 'auto'})
+public_token = captcha.get_public_token()
+# On validation:
+is_valid = captcha.verify_flow(request.form.get('CrafyCAPTCHA_token'))
+```
+
+---
+
+## 7. Cloudflare Turnstile (Optional)
+
+Optional third-party software integration for additional protection. Managed natively from the control panel.
+1. Generate an API token in Cloudflare with read/write permissions for Turnstile.
+2. Paste it into "Sync Cloudflare" in the CrafyCAPTCHA panel.
+The system automatically manages Turnstile challenges and Cloudflare telemetry as an extra security layer.
+
+---
+
+## 8. Integration Examples
+
+This is a JS and PHP integration example, inspired by a real flow where the form dynamically requests options from the backend, and then sends the verification for its atomic consumption.
+
+### A. Generate Secure Options (`options.php`)
+This endpoint is consumed by the widget to get the secure flow.
+
+```php
+<?php
+require_once __DIR__ . '/config.php'; // Load credentials and initialize SDK
+header('Content-Type: application/json');
+
+try {
+    // Returns { "eo": "encrypted_string_here" }
+    $encryptedIframeOptions = $global_CrafyCAPTCHA->createFlow(['mode' => 'auto']);
+    echo json_encode(['eo' => $encryptedIframeOptions]);
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Error creating flow.']);
+}
+```
+
+### B. Interface Form (`index.php`)
+
+```html
+<?php
+require_once __DIR__ . '/config.php';
+// It is important to fetch the token dynamically, as it changes if the plan is modified
+$publicToken = $global_CrafyCAPTCHA->getPublicToken();
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <script>
+        window.addEventListener('CrafyCAPTCHALoaded', () => {
+            CrafyCAPTCHA.init(
+                'crafy-container',
+                '<?php echo $global_config['public_key']; ?>',
+                '<?php echo $publicToken; ?>',
+                '<?php echo $global_config['signing_public_key']; ?>',
+                {
+                    optionsUrl: 'options.php', // Points to the PHP file created above
+                    inputName: 'CrafyCAPTCHA_token'
+                }
+            );
+        });
+    </script>
+    <!-- Deferred script loading -->
+    <script src="https://cdn.jsdelivr.net/gh/crafycaptcha/crafy-captcha-js/dist/CrafyCAPTCHA.min.js" defer></script>
+</head>
+<body>
+    <form action="verif.php" method="POST">
+        <input type="text" name="username" placeholder="Username">
+        <input type="password" name="password" placeholder="Password">
+        
+        <!-- Widget container -->
+        <div id="crafy-container"></div>
+        
+        <button type="submit">Login</button>
+    </form>
+</body>
+</html>
+```
+
+### C. Server Verification (`verif.php`)
+
+```php
+<?php
+require_once __DIR__ . '/config.php';
+
+// The JS SDK injects the token into the hidden input 'CrafyCAPTCHA_token' by default
+$captchaToken = $_POST['CrafyCAPTCHA_token'] ?? null;
+
+if (!$captchaToken) {
+    die("CAPTCHA token was not sent.");
+}
+
+try {
+    // verifyFlow validates cryptographic signature, expiration, and consumes the Nonce (Anti-Replay)
+    $isValid = $global_CrafyCAPTCHA->verifyFlow($captchaToken);
+
+    if ($isValid) {
+        echo "Valid CAPTCHA! Processing access...";
+    } else {
+        echo "CAPTCHA validation failed.";
+    }
+} catch (Exception $e) {
+    echo "Verification error: " . htmlspecialchars($e->getMessage());
+}
+```
+
+### D. Node.js and Python Equivalents
+
+If you don't use PHP, the server-side logic for generating options and verifying the token is just as simple.
+
+**Node.js (Express Example)**
+```javascript
+// Options endpoint (options)
+app.post('/options', async (req, res) => {
+    try {
+        const encryptedIframeOptions = await captcha.createFlow({ mode: 'auto' });
+        res.json({ eo: encryptedIframeOptions });
+    } catch (error) {
+        res.status(500).json({ error: 'Error creating flow.' });
+    }
+});
+
+// Verification endpoint (verif)
+app.post('/verif', async (req, res) => {
+    const captchaToken = req.body.CrafyCAPTCHA_token;
+    if (!captchaToken) return res.status(400).send("Missing token.");
+
+    try {
+        const isValid = await captcha.verifyFlow(captchaToken);
+        if (isValid) res.send("Valid CAPTCHA! Processing access...");
+        else res.send("Validation failed.");
+    } catch (error) {
+        res.status(500).send("Verification error.");
+    }
+});
+```
+
+**Python (Flask Example)**
+```python
+from flask import jsonify, request
+
+# Options endpoint (options)
+@app.route('/options', methods=['POST'])
+def options():
+    try:
+        encrypted_options = captcha.create_flow({'mode': 'auto'})
+        return jsonify({"eo": encrypted_options})
+    except Exception as e:
+        return jsonify({"error": "Error creating flow."}), 500
+
+# Verification endpoint (verif)
+@app.route('/verif', methods=['POST'])
+def verif():
+    captcha_token = request.form.get('CrafyCAPTCHA_token')
+    if not captcha_token:
+        return "Missing token.", 400
+        
+    try:
+        is_valid = captcha.verify_flow(captcha_token)
+        if is_valid:
+            return "Valid CAPTCHA! Processing access..."
+        else:
+            return "Validation failed."
+    except Exception as e:
+        return f"Verification error: {e}", 500
+```
+
+---
+
+## 9. Rate Limits, Plans and Billing
+
+The Backend SDK automatically handles `Public Token` regeneration upon any plan change.
+
+| Plan | Requests per Minute | Requests per Second | Requests per Month |
+| :--- | :--- | :--- | :--- |
+| **Starter** | 8 req / min | 2 req / sec | 10,000 requests / month |
+| **Growth** | 150 req / min | 20 req / sec | 100,000 requests / month |
+| **Scale** | 500 req / min | 50 req / sec | 500,000 requests / month |
+
+You can view the updated pricing at: https://captcha.crafy.net/#pricing
+
+If the requests per minute/second Rate Limit is exceeded, the API returns HTTP `429 Too Many Requests`. Exponential Backoff is recommended.
+
+---
+
+## 10. Frequently Asked Questions (FAQ)
+
+*   **Is there a free plan?** Yes, a generous plan for small projects (10k requests/month).
+*   **Can I use Cloudflare Turnstile?** Yes, it is an optional native integration from the panel.
+*   **How are bots stopped without visual puzzles?** Pre-analysis, local cryptographic Proof-of-Work (PoW), and silent browser instrumentation to verify humanity in the background.
+*   **How long does integration take?** Minutes. We offer drop-in SDKs and ready-to-use code.
+
+---
+
+## 11. Useful Links
+
+*   **Live Demo:** https://captcha.crafy.net/demo/
+*   **Full Documentation:** https://captcha.crafy.net/docs/
+*   **Customer Support:** https://captcha.crafy.net/support/
+*   **Terms and Conditions:** https://captcha.crafy.net/legal/terms/
+*   **Privacy Policy:** https://captcha.crafy.net/legal/privacy/
+
+---
+*(End of consolidated document)*

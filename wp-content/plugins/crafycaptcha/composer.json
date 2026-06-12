@@ -1,0 +1,29 @@
+{
+  "name": "crafyholding/crafycaptcha-wp",
+  "description": "CrafyCAPTCHA WordPress Plugin",
+  "type": "wordpress-plugin",
+  "require": {
+    "crafycaptcha/crafy-captcha": "^1.0"
+  },
+  "require-dev": {
+    "brianhenryie/strauss": "^0.17"
+  },
+  "extra": {
+    "strauss": {
+      "target_directory": "includes/vendor-prefixed",
+      "namespace_prefix": "CrafyCaptcha\\Dependencies\\",
+      "classmap_prefix": "CrafyCaptcha_Dependencies_",
+      "packages": [
+        "crafycaptcha/crafy-captcha"
+      ]
+    }
+  },
+  "scripts": {
+    "post-install-cmd": [
+      "vendor/bin/strauss"
+    ],
+    "post-update-cmd": [
+      "vendor/bin/strauss"
+    ]
+  }
+}
