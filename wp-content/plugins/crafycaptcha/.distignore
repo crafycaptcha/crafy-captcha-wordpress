@@ -1,0 +1,7 @@
+.git
+.gitignore
+.gitattributes
+.distignore
+composer.lock
+composer.json
+vendor/bin/

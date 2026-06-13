@@ -14,6 +14,7 @@ class CrafyCaptcha_Settings {
     public function __construct() {
         add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
         add_action( 'admin_init', array( $this, 'register_settings' ) );
+        add_action( 'admin_notices', array( $this, 'admin_notices' ) );
     }
 
     public function add_admin_menu() {
@@ -26,10 +27,47 @@ class CrafyCaptcha_Settings {
         );
     }
 
+    public function admin_notices() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        $public_key = get_option( 'crafycaptcha_public_key', '' );
+        $secret_key = get_option( 'crafycaptcha_secret_key', '' );
+
+        if ( empty( $public_key ) || empty( $secret_key ) ) {
+            $settings_url = admin_url( 'options-general.php?page=crafycaptcha' );
+            $message = sprintf(
+                /* translators: %s: URL to settings page */
+                __( 'El plugin está activado pero las claves API no están configuradas. Los formularios no estarán protegidos hasta que <a href="%s">completes la configuración</a>.', 'crafycaptcha' ),
+                esc_url( $settings_url )
+            );
+            $allowed_html = array( 'a' => array( 'href' => array() ) );
+
+            echo '<div class="notice notice-warning is-dismissible">';
+            echo '<p><strong>' . esc_html__( 'CrafyCAPTCHA:', 'crafycaptcha' ) . '</strong> ' . wp_kses( $message, $allowed_html ) . '</p>';
+            echo '</div>';
+        }
+    }
+
     public function register_settings() {
-        register_setting( 'crafycaptcha_options_group', 'crafycaptcha_public_key' );
-        register_setting( 'crafycaptcha_options_group', 'crafycaptcha_secret_key' );
-        register_setting( 'crafycaptcha_options_group', 'crafycaptcha_signing_public_key' );
+        register_setting( 'crafycaptcha_options_group', 'crafycaptcha_public_key', array(
+            'type'              => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default'           => '',
+        ) );
+        
+        register_setting( 'crafycaptcha_options_group', 'crafycaptcha_secret_key', array(
+            'type'              => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default'           => '',
+        ) );
+        
+        register_setting( 'crafycaptcha_options_group', 'crafycaptcha_signing_public_key', array(
+            'type'              => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default'           => '',
+        ) );
 
         add_settings_section(
             'crafycaptcha_main_section',
@@ -64,7 +102,7 @@ class CrafyCaptcha_Settings {
     }
 
     public function render_section_info() {
-        echo '<p>Introduce las credenciales de tu cuenta de CrafyCAPTCHA. Puedes obtenerlas en tu panel de control.</p>';
+        echo '<p>' . esc_html__( 'Introduce las credenciales de tu cuenta de CrafyCAPTCHA. Puedes obtenerlas en tu panel de control.', 'crafycaptcha' ) . '</p>';
     }
 
     public function render_public_key_field() {
@@ -88,7 +126,7 @@ class CrafyCaptcha_Settings {
         }
         ?>
         <div class="wrap">
-            <h1>Configuración de CrafyCAPTCHA</h1>
+            <h1><?php esc_html_e( 'Configuración de CrafyCAPTCHA', 'crafycaptcha' ); ?></h1>
             <form method="post" action="options.php">
                 <?php
                 settings_fields( 'crafycaptcha_options_group' );
