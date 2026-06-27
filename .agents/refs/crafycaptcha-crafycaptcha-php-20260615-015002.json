@@ -1,0 +1,138 @@
+{
+    "generated_at": "2026-06-15 01:50:02",
+    "plugin": "CrafyCAPTCHA",
+    "results": {
+        "readme.txt": [
+            {
+                "message": "Tested up to: 6.4 < 7.0. The \"Tested up to\" value in your plugin is not set to the current version of WordPress. This means your plugin will not show up in searches, as we require plugins to be compatible and documented as tested up to the most recent version of WordPress.",
+                "code": "outdated_tested_upto_header",
+                "link": "http://localhost/proyectos/wpcommerce/wp-admin/plugin-editor.php?plugin=crafycaptcha%2Fcrafycaptcha.php&file=crafycaptcha%2Freadme.txt",
+                "docs": "https://developer.wordpress.org/plugins/wordpress-org/how-your-readme-txt-works/#readme-header-information",
+                "severity": 7,
+                "type": "ERROR",
+                "line": 0,
+                "column": 0
+            }
+        ],
+        "D:\\Program Files\\xampp\\htdocs\\proyectos\\wpcommerce\\wp-content\\plugins\\crafycaptcha\\includes\\class-frontend-injector.php": [
+            {
+                "message": "Found call to wp_enqueue_script() with external resource. Offloading scripts to your servers or any remote service is disallowed.",
+                "code": "PluginCheck.CodeAnalysis.EnqueuedResourceOffloading.OffloadedContent",
+                "link": null,
+                "docs": "",
+                "severity": 5,
+                "type": "ERROR",
+                "line": 47,
+                "column": 13
+            },
+            {
+                "message": "Resource version not set in call to wp_enqueue_script(). This means new versions of the script may not always be loaded due to browser caching.",
+                "code": "WordPress.WP.EnqueuedResourceParameters.MissingVersion",
+                "link": null,
+                "docs": "",
+                "severity": 5,
+                "type": "WARNING",
+                "line": 49,
+                "column": 13
+            }
+        ],
+        ".distignore": [
+            {
+                "message": "Hidden files are not permitted.",
+                "code": "hidden_files",
+                "link": null,
+                "docs": "",
+                "severity": 8,
+                "type": "WARNING",
+                "line": 0,
+                "column": 0
+            }
+        ],
+        "D:\\Program Files\\xampp\\htdocs\\proyectos\\wpcommerce\\wp-content\\plugins\\crafycaptcha\\crafycaptcha.php": [
+            {
+                "message": "Global variables defined by a theme/plugin should start with the theme/plugin prefix. Found: &quot;$strauss_autoloader&quot;.",
+                "code": "WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound",
+                "link": null,
+                "docs": "",
+                "severity": 6,
+                "type": "WARNING",
+                "line": 25,
+                "column": 1
+            },
+            {
+                "message": "Global variables defined by a theme/plugin should start with the theme/plugin prefix. Found: &quot;$vendor_autoloader&quot;.",
+                "code": "WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound",
+                "link": null,
+                "docs": "",
+                "severity": 6,
+                "type": "WARNING",
+                "line": 26,
+                "column": 1
+            },
+            {
+                "message": "load_plugin_textdomain() has been discouraged since WordPress version 4.6. When your plugin is hosted on WordPress.org, you no longer need to manually include this function call for translations under your plugin slug. WordPress will automatically load the translations for you as needed.",
+                "code": "PluginCheck.CodeAnalysis.DiscouragedFunctions.load_plugin_textdomainFound",
+                "link": null,
+                "docs": "https://make.wordpress.org/core/2016/07/06/i18n-improvements-in-4-6/",
+                "severity": 5,
+                "type": "WARNING",
+                "line": 72,
+                "column": 9
+            }
+        ],
+        "D:\\Program Files\\xampp\\htdocs\\proyectos\\wpcommerce\\wp-content\\plugins\\crafycaptcha\\includes\\class-backend-validator.php": [
+            {
+                "message": "Processing form data without nonce verification.",
+                "code": "WordPress.Security.NonceVerification.Missing",
+                "link": null,
+                "docs": "",
+                "severity": 5,
+                "type": "WARNING",
+                "line": 43,
+                "column": 21
+            },
+            {
+                "message": "Processing form data without nonce verification.",
+                "code": "WordPress.Security.NonceVerification.Missing",
+                "link": null,
+                "docs": "",
+                "severity": 5,
+                "type": "WARNING",
+                "line": 65,
+                "column": 21
+            }
+        ],
+        "D:\\Program Files\\xampp\\htdocs\\proyectos\\wpcommerce\\wp-content\\plugins\\crafycaptcha\\includes\\class-core.php": [
+            {
+                "message": "error_log() found. Debug code should not normally be used in production.",
+                "code": "WordPress.PHP.DevelopmentFunctions.error_log_error_log",
+                "link": null,
+                "docs": "",
+                "severity": 5,
+                "type": "WARNING",
+                "line": 19,
+                "column": 13
+            },
+            {
+                "message": "Processing form data without nonce verification.",
+                "code": "WordPress.Security.NonceVerification.Missing",
+                "link": null,
+                "docs": "",
+                "severity": 5,
+                "type": "WARNING",
+                "line": 106,
+                "column": 19
+            },
+            {
+                "message": "Processing form data without nonce verification.",
+                "code": "WordPress.Security.NonceVerification.Missing",
+                "link": null,
+                "docs": "",
+                "severity": 5,
+                "type": "WARNING",
+                "line": 116,
+                "column": 67
+            }
+        ]
+    }
+}

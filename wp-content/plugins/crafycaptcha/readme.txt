@@ -1,8 +1,8 @@
 === CrafyCAPTCHA ===
-Contributors: crafycaptcha
+Contributors: crafycaptcha, crafycaptcha1
 Tags: captcha, antispam, security, login protection, woocommerce
 Requires at least: 5.8
-Tested up to: 6.4
+Tested up to: 7.0
 Stable tag: 1.0.0
 Requires PHP: 7.4
 License: GPL-2.0-or-later
@@ -12,14 +12,19 @@ Advanced bot protection with adaptive friction for WordPress and WooCommerce.
 
 == Description ==
 
-CrafyCAPTCHA is a security plugin for WordPress that protects your forms against bots, spam, and automated attacks using adaptive friction and intelligent analysis.
+CrafyCAPTCHA is a security plugin that acts as the official SDK for WordPress, protecting your forms against bots, spam, and automated attacks using adaptive friction and intelligent analysis. Powered by [CrafyCAPTCHA](https://captcha.crafy.net/).
+
+By using this plugin, you agree to our [Terms and Conditions](https://captcha.crafy.net/legal/terms/) and [Privacy Policy](https://captcha.crafy.net/legal/privacy/).
 
 ### Key Features
 
 *   Protection for login, registration, password recovery, and comment forms.
 *   Native integration with WooCommerce (Login, Registration, Checkout — including Block Checkout).
-*   Native integration with Easy Digital Downloads (Checkout).
+*   Native integration with Easy Digital Downloads (Checkout, Login, Registration).
+*   Integration with Contact Form 7, WPForms, Gravity Forms, and Elementor Pro Forms.
 *   Adaptive friction: Only challenges suspicious users.
+*   Full compliance with CSP (Content Security Policy) and WordPress coding standards.
+*   Multi-widget support: Multiple independent CAPTCHA widgets on the same page.
 
 == Installation ==
 
@@ -60,5 +65,6 @@ Yes, CrafyCAPTCHA fully supports multiple independent widgets on a single page (
 
 = 1.0.0 =
 * Initial stable release with WordPress, WooCommerce, and EDD integration.
+* Added support for Contact Form 7, WPForms, Gravity Forms, and Elementor Pro Forms.
 * Robust CSRF support, anti-spam protection, and fail-closed/open-fail mitigation.
 * Multi-widget support for pages with multiple forms.

@@ -44,7 +44,7 @@ class CrafyCaptcha_Frontend_Injector
 
         wp_enqueue_script(
             'crafycaptcha-js',
-            'https://cdn.jsdelivr.net/gh/crafycaptcha/crafy-captcha-js@1.1.6/dist/CrafyCAPTCHA.min.js',
+            CRAFYCAPTCHA_JS_URL,
             array(),
             null,
             true
@@ -53,15 +53,20 @@ class CrafyCaptcha_Frontend_Injector
     }
 
     /**
-     * Añade atributos de seguridad (integrity y crossorigin) al script del CDN.
+     * Añade atributos integrity y crossorigin al script del SDK.
      */
     public static function add_script_attributes($tag, $handle)
     {
         if ('crafycaptcha-js' === $handle) {
-            return str_replace(' src', ' defer integrity="sha256-6U66+z7itP4Nexm7OJauXWVAKPMPY3sbdLU9/JMfbmY=" crossorigin="anonymous" src', $tag);
+            return str_replace(
+                ' src',
+                ' integrity="' . esc_attr(CRAFYCAPTCHA_JS_INTEGRITY) . '" crossorigin="anonymous" src',
+                $tag
+            );
         }
         return $tag;
     }
+
 
     /**
      * Renderiza el contenedor HTML y el script de inicialización inline.
@@ -70,6 +75,10 @@ class CrafyCaptcha_Frontend_Injector
     {
 
         CrafyCaptcha_Core::log('render_widget() called.');
+
+        if ( is_admin() && ! wp_doing_ajax() ) {
+            return;
+        }
 
         $public_key = get_option('crafycaptcha_public_key', '');
         if (empty($public_key)) {
@@ -83,15 +92,19 @@ class CrafyCaptcha_Frontend_Injector
             return;
         }
 
-        try {
-            $public_token = $crafy->getPublicToken();
-        } catch (Exception $e) {
-            CrafyCaptcha_Core::log('render_widget() Error getting public token: ' . $e->getMessage());
-            echo '<div class="crafycaptcha-error" style="color: #666; padding: 10px; margin-bottom: 15px;">';
-            echo esc_html__('El servicio de seguridad no está disponible temporalmente.', 'crafycaptcha');
-            echo '</div>';
-            return;
+        static $cached_public_token = null;
+        if ( $cached_public_token === null ) {
+            try {
+                $cached_public_token = $crafy->getPublicToken();
+            } catch (Exception $e) {
+                CrafyCaptcha_Core::log('render_widget() Error getting public token: ' . $e->getMessage());
+                echo '<div class="crafycaptcha-error" style="color: #666; padding: 10px; margin-bottom: 15px;">';
+                echo esc_html__('The security service is temporarily unavailable.', 'crafycaptcha');
+                echo '</div>';
+                return;
+            }
         }
+        $public_token = $cached_public_token;
 
         CrafyCaptcha_Core::log('render_widget() proceeding to render.');
         $signing_public_key = get_option('crafycaptcha_signing_public_key', '');
@@ -101,46 +114,50 @@ class CrafyCaptcha_Frontend_Injector
         $input_name = 'crafycaptcha_token_' . uniqid();
         ?>
         <div id="<?php echo esc_attr($container_id); ?>" class="crafycaptcha-container" style="margin-bottom: 15px;"></div>
-        <script>
-            (function () {
-                var crafyNonce = '<?php echo esc_js(wp_create_nonce('crafycaptcha_options_nonce')); ?>';
-                const containerId = '<?php echo esc_js($container_id); ?>';
-                const inputName = '<?php echo esc_js($input_name); ?>';
-                let initialized = false;
-
-                const initWidget = () => {
-                    if (initialized) return;
-                    initialized = true;
-                    console.log('[CrafyCAPTCHA Plugin] Initializing widget for container:', containerId, 'with inputName:', inputName);
-                    try {
-                        CrafyCAPTCHA.setAutoLoad(false);
-                        var crafyInstance = CrafyCAPTCHA.init(
-                            containerId,
-                            '<?php echo esc_js($public_key); ?>',
-                            '<?php echo esc_js($public_token); ?>',
-                            '<?php echo esc_js($signing_public_key); ?>',
-                            {
-                                optionsUrl: '<?php echo esc_url_raw($options_url); ?>',
-                                inputName: inputName
-                            },
-                            {
-                                fetchOptionsParameters: { security: crafyNonce }
-                            }
-                        );
-                        console.log('[CrafyCAPTCHA Plugin] Widget initialized. Instance:', crafyInstance);
-                    } catch (e) {
-                        console.error('[CrafyCAPTCHA Plugin] Error during CrafyCAPTCHA.init:', e);
-                    }
-                };
-
-                if (typeof CrafyCAPTCHA !== 'undefined') {
-                    initWidget();
-                } else {
-                    window.addEventListener('CrafyCAPTCHALoaded', initWidget);
-                }
-            })();
-        </script>
         <?php
+
+        $nonce = wp_create_nonce('crafycaptcha_options_nonce');
+
+        $inline_js = '(function () {
+            const CRAFY_DEBUG = false;
+            var crafyNonce = "' . esc_js($nonce) . '";
+            const containerId = "' . esc_js($container_id) . '";
+            const inputName = "' . esc_js($input_name) . '";
+            let initialized = false;
+
+            const initWidget = () => {
+                if (initialized) return;
+                initialized = true;
+                if (CRAFY_DEBUG) console.log("[CrafyCAPTCHA Plugin] Initializing widget for container:", containerId, "with inputName:", inputName);
+                try {
+                    CrafyCAPTCHA.setAutoLoad(false);
+                    var crafyInstance = CrafyCAPTCHA.init(
+                        containerId,
+                        "' . esc_js($public_key) . '",
+                        "' . esc_js($public_token) . '",
+                        "' . esc_js($signing_public_key) . '",
+                        {
+                            optionsUrl: "' . esc_url($options_url) . '",
+                            inputName: inputName
+                        },
+                        {
+                            fetchOptionsParameters: { security: crafyNonce }
+                        }
+                    );
+                    if (CRAFY_DEBUG) console.log("[CrafyCAPTCHA Plugin] Widget initialized. Instance:", crafyInstance);
+                } catch (e) {
+                    if (CRAFY_DEBUG) console.error("[CrafyCAPTCHA Plugin] Error during CrafyCAPTCHA.init:", e);
+                }
+            };
+
+            if (typeof CrafyCAPTCHA !== "undefined") {
+                initWidget();
+            } else {
+                window.addEventListener("CrafyCAPTCHALoaded", initWidget);
+            }
+        })();';
+
+        wp_print_inline_script_tag( $inline_js );
 
         CrafyCaptcha_Core::log('render_widget() finished. Inline script printed.');
 

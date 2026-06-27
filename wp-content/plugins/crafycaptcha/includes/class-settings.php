@@ -39,7 +39,7 @@ class CrafyCaptcha_Settings {
             $settings_url = admin_url( 'options-general.php?page=crafycaptcha' );
             $message = sprintf(
                 /* translators: %s: URL to settings page */
-                __( 'El plugin está activado pero las claves API no están configuradas. Los formularios no estarán protegidos hasta que <a href="%s">completes la configuración</a>.', 'crafycaptcha' ),
+                __( 'The plugin is active but the API keys are not configured. Forms will not be protected until you <a href="%s">complete the configuration</a>.', 'crafycaptcha' ),
                 esc_url( $settings_url )
             );
             $allowed_html = array( 'a' => array( 'href' => array() ) );
@@ -71,7 +71,7 @@ class CrafyCaptcha_Settings {
 
         add_settings_section(
             'crafycaptcha_main_section',
-            'Credenciales de API',
+            'API Credentials',
             array( $this, 'render_section_info' ),
             'crafycaptcha'
         );
@@ -102,7 +102,7 @@ class CrafyCaptcha_Settings {
     }
 
     public function render_section_info() {
-        echo '<p>' . esc_html__( 'Introduce las credenciales de tu cuenta de CrafyCAPTCHA. Puedes obtenerlas en tu panel de control.', 'crafycaptcha' ) . '</p>';
+        echo '<p>' . esc_html__( 'Enter your CrafyCAPTCHA account credentials. You can obtain them in your dashboard.', 'crafycaptcha' ) . '</p>';
     }
 
     public function render_public_key_field() {
@@ -126,7 +126,7 @@ class CrafyCaptcha_Settings {
         }
         ?>
         <div class="wrap">
-            <h1><?php esc_html_e( 'Configuración de CrafyCAPTCHA', 'crafycaptcha' ); ?></h1>
+            <h1><?php esc_html_e( 'CrafyCAPTCHA Settings', 'crafycaptcha' ); ?></h1>
             <form method="post" action="options.php">
                 <?php
                 settings_fields( 'crafycaptcha_options_group' );

@@ -36,8 +36,8 @@ class CrafyCaptcha_WooCommerce {
         }
 
         // ─── Validación Backend para login/registro (funciona en ambos modos) ───
-        add_filter( 'woocommerce_process_login_errors', array( $this, 'validate_login_register' ), 10, 1 );
-        add_filter( 'woocommerce_process_registration_errors', array( $this, 'validate_login_register' ), 10, 1 );
+        add_filter( 'woocommerce_process_login_errors', array( $this, 'validate_login_register' ), 10, 3 );
+        add_filter( 'woocommerce_process_registration_errors', array( $this, 'validate_login_register' ), 10, 4 );
     }
 
     /**
@@ -122,94 +122,95 @@ class CrafyCaptcha_WooCommerce {
 
         // Construir el HTML del widget + script de inicialización + fetch interceptor
         $widget_html = '<div id="' . esc_attr( $container_id ) . '" style="margin-bottom: 15px;"></div>';
-        $widget_html .= '<script>
-            (function () {
-                var crafyNonce = ' . wp_json_encode( $nonce ) . ';
-                var crafyContainerId = ' . wp_json_encode( $container_id ) . ';
-                var crafyInputName = ' . wp_json_encode( $input_name ) . ';
-                let initialized = false;
-                console.log("[CrafyCAPTCHA Plugin] Checkout block inline script executed.");
+        $inline_js = '(function () {
+            const CRAFY_DEBUG = false;
+            var crafyNonce = ' . wp_json_encode( $nonce ) . ';
+            var crafyContainerId = ' . wp_json_encode( $container_id ) . ';
+            var crafyInputName = ' . wp_json_encode( $input_name ) . ';
+            let initialized = false;
+            if (CRAFY_DEBUG) console.log("[CrafyCAPTCHA Plugin] Checkout block inline script executed.");
 
-                // ── 1. Inicializar el widget ──
-                function initCrafyCheckout() {
-                    if (initialized) return;
-                    initialized = true;
-                    console.log("[CrafyCAPTCHA Plugin] Initializing checkout widget...");
+            // ── 1. Inicializar el widget ──
+            function initCrafyCheckout() {
+                if (initialized) return;
+                initialized = true;
+                if (CRAFY_DEBUG) console.log("[CrafyCAPTCHA Plugin] Initializing checkout widget...");
+                try {
+                    CrafyCAPTCHA.setAutoLoad(false);
+                    CrafyCAPTCHA.init(
+                        crafyContainerId,
+                        ' . wp_json_encode( $public_key ) . ',
+                        ' . wp_json_encode( $public_token ) . ',
+                        ' . wp_json_encode( $signing_public_key ) . ',
+                        {
+                            optionsUrl: ' . wp_json_encode( $options_url ) . ',
+                            inputName: crafyInputName
+                        },
+                        {
+                            fetchOptionsParameters: { security: crafyNonce }
+                        }
+                    );
+                    if (CRAFY_DEBUG) console.log("[CrafyCAPTCHA Plugin] Checkout widget initialized.");
+                } catch(e) {
+                    if (CRAFY_DEBUG) console.error("[CrafyCAPTCHA Plugin] Error during CrafyCAPTCHA.init:", e);
+                }
+            }
+            
+            if (typeof CrafyCAPTCHA !== "undefined") {
+                initCrafyCheckout();
+            } else {
+                window.addEventListener("CrafyCAPTCHALoaded", initCrafyCheckout);
+            }
+
+            // ── 2. Interceptar fetch para inyectar el token en el body JSON ──
+            // WooCommerce Blocks envía el checkout como POST JSON a /wc/store/v1/checkout
+            // El formulario HTML no se serializa, solo el estado interno de React.
+            // Necesitamos interceptar el fetch y añadir el token al JSON body.
+            if (!window.__crafyCaptchaFetchPatched) {
+                window.__crafyCaptchaFetchPatched = true;
+                var originalFetch = window.fetch;
+                window.fetch = function(input, init) {
                     try {
-                        CrafyCAPTCHA.setAutoLoad(false);
-                        CrafyCAPTCHA.init(
-                            crafyContainerId,
-                            ' . wp_json_encode( $public_key ) . ',
-                            ' . wp_json_encode( $public_token ) . ',
-                            ' . wp_json_encode( $signing_public_key ) . ',
-                            {
-                                optionsUrl: ' . wp_json_encode( $options_url ) . ',
-                                inputName: crafyInputName
-                            },
-                            {
-                                fetchOptionsParameters: { security: crafyNonce }
-                            }
-                        );
-                        console.log("[CrafyCAPTCHA Plugin] Checkout widget initialized.");
-                    } catch(e) {
-                        console.error("[CrafyCAPTCHA Plugin] Error during CrafyCAPTCHA.init:", e);
-                    }
-                }
-                
-                if (typeof CrafyCAPTCHA !== "undefined") {
-                    initCrafyCheckout();
-                } else {
-                    window.addEventListener("CrafyCAPTCHALoaded", initCrafyCheckout);
-                }
+                        var url = (typeof input === "string") ? input : (input && input.url ? input.url : "");
+                        if (
+                            init &&
+                            init.method &&
+                            init.method.toUpperCase() === "POST" &&
+                            url.indexOf("/wc/store") !== -1 &&
+                            url.indexOf("checkout") !== -1
+                        ) {
+                            // Buscar el token en el DOM por su nombre dinámico
+                            var tokenInput = document.querySelector("input[name=\'" + crafyInputName + "\']");
+                            var tokenValue = tokenInput ? tokenInput.value : "";
+                            if (CRAFY_DEBUG) console.log("[CrafyCAPTCHA Plugin] Fetch intercepted for checkout. Token found:", !!tokenValue, "Token length:", tokenValue.length);
 
-                // ── 2. Interceptar fetch para inyectar el token en el body JSON ──
-                // WooCommerce Blocks envía el checkout como POST JSON a /wc/store/v1/checkout
-                // El formulario HTML no se serializa, solo el estado interno de React.
-                // Necesitamos interceptar el fetch y añadir el token al JSON body.
-                if (!window.__crafyCaptchaFetchPatched) {
-                    window.__crafyCaptchaFetchPatched = true;
-                    var originalFetch = window.fetch;
-                    window.fetch = function(input, init) {
-                        try {
-                            var url = (typeof input === "string") ? input : (input && input.url ? input.url : "");
-                            if (
-                                init &&
-                                init.method &&
-                                init.method.toUpperCase() === "POST" &&
-                                url.indexOf("/wc/store") !== -1 &&
-                                url.indexOf("checkout") !== -1
-                            ) {
-                                // Buscar el token en el DOM por su nombre dinámico
-                                var tokenInput = document.querySelector("input[name=\'" + crafyInputName + "\']");
-                                var tokenValue = tokenInput ? tokenInput.value : "";
-                                console.log("[CrafyCAPTCHA Plugin] Fetch intercepted for checkout. Token found:", !!tokenValue, "Token length:", tokenValue.length);
-
-                                if (tokenValue && init.body) {
-                                    try {
-                                        var bodyObj = JSON.parse(init.body);
-                                        if (!bodyObj.extensions) {
-                                            bodyObj.extensions = {};
-                                        }
-                                        if (!bodyObj.extensions.crafycaptcha) {
-                                            bodyObj.extensions.crafycaptcha = {};
-                                        }
-                                        bodyObj.extensions.crafycaptcha.crafycaptcha_token = tokenValue;
-                                        init.body = JSON.stringify(bodyObj);
-                                        console.log("[CrafyCAPTCHA Plugin] Token injected into checkout request body.");
-                                    } catch (parseErr) {
-                                        console.error("[CrafyCAPTCHA Plugin] Error parsing fetch body:", parseErr);
+                            if (tokenValue && init.body) {
+                                try {
+                                    var bodyObj = JSON.parse(init.body);
+                                    if (!bodyObj.extensions) {
+                                        bodyObj.extensions = {};
                                     }
+                                    if (!bodyObj.extensions.crafycaptcha) {
+                                        bodyObj.extensions.crafycaptcha = {};
+                                    }
+                                    bodyObj.extensions.crafycaptcha.crafycaptcha_token = tokenValue;
+                                    init.body = JSON.stringify(bodyObj);
+                                    if (CRAFY_DEBUG) console.log("[CrafyCAPTCHA Plugin] Token injected into checkout request body.");
+                                } catch (parseErr) {
+                                    if (CRAFY_DEBUG) console.error("[CrafyCAPTCHA Plugin] Error parsing fetch body:", parseErr);
                                 }
                             }
-                        } catch (fetchErr) {
-                            console.error("[CrafyCAPTCHA Plugin] Error in fetch interceptor:", fetchErr);
                         }
-                        return originalFetch.apply(this, arguments);
-                    };
-                    console.log("[CrafyCAPTCHA Plugin] Fetch interceptor installed.");
-                }
-            })();
-        </script>';
+                    } catch (fetchErr) {
+                        if (CRAFY_DEBUG) console.error("[CrafyCAPTCHA Plugin] Error in fetch interceptor:", fetchErr);
+                    }
+                    return originalFetch.apply(this, arguments);
+                };
+                if (CRAFY_DEBUG) console.log("[CrafyCAPTCHA Plugin] Fetch interceptor installed.");
+            }
+        })();';
+
+        $widget_html .= wp_get_inline_script_tag( $inline_js );
 
         return $widget_html . $block_content;
     }
@@ -219,7 +220,7 @@ class CrafyCaptcha_WooCommerce {
      */
     public function validate_login_register( $errors ) {
         if ( ! CrafyCaptcha_Core::is_token_valid() ) {
-            $message = __( '<strong>ERROR</strong>: Validación de seguridad fallida. Por favor, verifica que eres humano.', 'crafycaptcha' );
+            $message = __( '<strong>ERROR</strong>: Security validation failed. Please verify that you are human.', 'crafycaptcha' );
             $errors->add( 'crafycaptcha_invalid', wp_kses( $message, array( 'strong' => array() ) ) );
         }
         return $errors;
@@ -230,7 +231,7 @@ class CrafyCaptcha_WooCommerce {
      */
     public function validate_checkout_classic( $data, $errors ) {
         if ( ! CrafyCaptcha_Core::is_token_valid() ) {
-            $message = __( '<strong>ERROR</strong>: Validación de seguridad fallida. Por favor, verifica que eres humano.', 'crafycaptcha' );
+            $message = __( '<strong>ERROR</strong>: Security validation failed. Please verify that you are human.', 'crafycaptcha' );
             $errors->add( 'crafycaptcha_invalid', wp_kses( $message, array( 'strong' => array() ) ) );
         }
     }
@@ -267,7 +268,7 @@ class CrafyCaptcha_WooCommerce {
         if ( empty( $token ) ) {
             CrafyCaptcha_Core::log( 'validate_checkout_blocks() - No token received.' );
             throw new \Exception(
-                esc_html__( 'Validación de seguridad fallida. Por favor, verifica que eres humano.', 'crafycaptcha' )
+                esc_html__( 'Security validation failed. Please verify that you are human.', 'crafycaptcha' )
             );
         }
 
@@ -277,7 +278,7 @@ class CrafyCaptcha_WooCommerce {
         if ( ! CrafyCaptcha_Core::is_token_valid() ) {
             CrafyCaptcha_Core::log( 'validate_checkout_blocks() - Token inválido.' );
             throw new \Exception(
-                esc_html__( 'Validación de seguridad fallida. Por favor, verifica que eres humano.', 'crafycaptcha' )
+                esc_html__( 'Security validation failed. Please verify that you are human.', 'crafycaptcha' )
             );
         }
 
